@@ -59,6 +59,17 @@ main{padding:20px 0 60px}
 .acc{display:flex;flex-wrap:wrap;gap:4px;align-items:center;font-size:.8rem;color:var(--muted)}
 .acc button{min-width:28px;height:28px;border:1px solid var(--line);border-radius:8px;background:var(--card);cursor:pointer}
 .acc button:hover{border-color:var(--lime);background:var(--lime-soft)}
+.kbtog{display:flex;justify-content:flex-end}
+.kbtog button{border:1px solid var(--line);border-radius:999px;background:var(--card);padding:4px 12px;font-size:.82rem;cursor:pointer;color:var(--ink)}
+.kbtog button[aria-pressed="true"]{background:var(--lime);border-color:var(--lime);color:#151515;font-weight:600}
+.kbd{display:grid;gap:4px;padding:8px;border:1px solid var(--line);border-radius:12px;background:var(--paper)}
+.kbd[hidden]{display:none}
+.kbd .row{display:flex;gap:4px;justify-content:center}
+.kbd button{flex:1 1 0;min-width:0;height:36px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font-size:1rem;cursor:pointer;padding:0}
+.kbd button:hover{border-color:var(--lime);background:var(--lime-soft)}
+.kbd button.wide{flex:1.6 1 0;font-size:.8rem}
+.kbd button.sp{flex:4 1 0;font-size:.8rem}
+.kbd button[aria-pressed="true"]{background:var(--lime);border-color:var(--lime);color:#151515}
 .row{display:flex;flex-wrap:wrap;gap:6px}
 select{padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--paper);max-width:100%;flex:1 1 140px;min-width:0}
 .cho{display:flex;flex-wrap:wrap;gap:4px}
@@ -169,6 +180,8 @@ footer{border-top:1px solid var(--line);color:var(--muted);font-size:.85rem;padd
         <div class="tools">
           <div class="search"><input id="q" type="search" autocomplete="off"><button type="button" id="go" aria-label="Rechercher / 검색"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="7"/><path d="M16 16l5.5 5.5"/></svg></button></div>
           <div class="acc" id="acc"></div>
+          <div class="kbtog"><button type="button" id="kbbtn" aria-pressed="false" aria-controls="kbd">⌨ 한글</button></div>
+          <div class="kbd" id="kbd" hidden></div>
           <div class="row">
             <select id="fcat"></select>
             <select id="fform"></select>
@@ -233,7 +246,7 @@ const coll=new Intl.Collator('ko');
 const T={
  fr:{tagline:'Les mots de la beauté coréenne, expliqués en français',n1:'Lexique',n2:'Éléments de formation',n3:'Faux amis',n4:'Chiffres',n5:'À propos',
   q:'Mot coréen, français ou romanisation',allcat:'Tous les domaines',allform:'Toutes les formations',
-  count:n=>n+' entrées',more:'Afficher la suite',none:'Aucune entrée ne correspond. Essayez un autre mot ou retirez un filtre.',
+  count:n=>n+(n>1?' entrées':' entrée'),more:'Afficher la suite',none:'Aucune entrée ne correspond. Essayez un autre mot ou retirez un filtre.',
   back:'← Liste',mean:'Sens (coréen)',frl:'Équivalent français',ex:'Exemple',gram:'Formation du mot',ing:'Ingrédient',inci:'Nom INCI',sub:'Sous cette entrée',see:'Voir aussi',exs:'Mots formés',
   faux:'Faux ami',unit:{'단어':'mot','구':'locution','문장':'phrase'},
   pos:{'명사':'nom','동사':'verbe','형용사':'adjectif','부사':'adverbe','어근':'radical'},
@@ -326,6 +339,8 @@ function applyLang(){
   document.documentElement.lang=L; $('lfr').setAttribute('aria-pressed',L==='fr'); $('lko').setAttribute('aria-pressed',L==='ko');
   document.querySelectorAll('[data-t]').forEach(n=>n.textContent=t(n.dataset.t));
   $('acc').hidden=L!=='fr';
+  $('kbbtn').textContent=L==='ko'?'⌨ 한글 자판':'⌨ Clavier coréen';
+  if(!$('kbd').hidden) drawKbd();
   $('q').placeholder=t('q'); $('q').setAttribute('aria-label',t('q'));
   $('fcat').innerHTML='<option value="">'+t('allcat')+'</option>'+CATS.map(c=>'<option value="'+c+'"'+(st.cat===c?' selected':'')+'>'+esc(T[L].cat[c])+'</option>').join('');
   $('fform').innerHTML='<option value="">'+t('allform')+'</option>'+FORMS.map(c=>'<option value="'+c+'"'+(st.form===c?' selected':'')+'>'+esc(tr('form',c))+'</option>').join('');
@@ -340,6 +355,46 @@ function route(){
   else if(h==='lexique') $('desk').classList.remove('reading');
   setView(v);
 }
+
+/* 화면 한글 자판 (두벌식) */
+const CHO='ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ', JUNG='ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ', JONG=['','ㄱ','ㄲ','ㄳ','ㄴ','ㄵ','ㄶ','ㄷ','ㄹ','ㄺ','ㄻ','ㄼ','ㄽ','ㄾ','ㄿ','ㅀ','ㅁ','ㅂ','ㅄ','ㅅ','ㅆ','ㅇ','ㅈ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+const VC={'ㅗㅏ':'ㅘ','ㅗㅐ':'ㅙ','ㅗㅣ':'ㅚ','ㅜㅓ':'ㅝ','ㅜㅔ':'ㅞ','ㅜㅣ':'ㅟ','ㅡㅣ':'ㅢ'};
+const JC={'ㄱㅅ':'ㄳ','ㄴㅈ':'ㄵ','ㄴㅎ':'ㄶ','ㄹㄱ':'ㄺ','ㄹㅁ':'ㄻ','ㄹㅂ':'ㄼ','ㄹㅅ':'ㄽ','ㄹㅌ':'ㄾ','ㄹㅍ':'ㄿ','ㄹㅎ':'ㅀ','ㅂㅅ':'ㅄ'};
+const JS={}; Object.keys(JC).forEach(k=>{JS[JC[k]]=[k[0],k[1]]});
+const isV=x=>JUNG.includes(x);
+function hcompose(seq){let out='',c=null,v=null,j=null;
+  const fl=()=>{if(c&&v)out+=String.fromCharCode(0xAC00+(CHO.indexOf(c)*21+JUNG.indexOf(v))*28+JONG.indexOf(j||''));else out+=(c||'')+(v||'');c=v=j=null;};
+  for(const x of seq){
+    if(isV(x)){
+      if(c&&!v){v=x}
+      else if(v&&!j){const m=VC[v+x];if(m)v=m;else{fl();v=x}}
+      else if(c&&v&&j){let nc;const s=JS[j];if(s){j=s[0];nc=s[1]}else{nc=j;j=null}fl();c=nc;v=x}
+      else{fl();v=x}
+    }else{
+      if(!c&&!v){c=x}
+      else if(!v||!c){fl();c=x}
+      else if(!j){if(JONG.includes(x)&&x!=='ㄸ'&&x!=='ㅃ'&&x!=='ㅉ')j=x;else{fl();c=x}}
+      else{const m=JC[j+x];if(m)j=m;else{fl();c=x}}
+    }}
+  fl();return out;}
+let kbase='',kseq=[],kshift=false;
+const KROWS=[['ㅂ','ㅈ','ㄷ','ㄱ','ㅅ','ㅛ','ㅕ','ㅑ','ㅐ','ㅔ'],['ㅁ','ㄴ','ㅇ','ㄹ','ㅎ','ㅗ','ㅓ','ㅏ','ㅣ'],['ㅋ','ㅌ','ㅊ','ㅍ','ㅠ','ㅜ','ㅡ']];
+const KSH={'ㅂ':'ㅃ','ㅈ':'ㅉ','ㄷ':'ㄸ','ㄱ':'ㄲ','ㅅ':'ㅆ','ㅐ':'ㅒ','ㅔ':'ㅖ'};
+function drawKbd(){const ko=L==='ko';
+  $('kbd').innerHTML=KROWS.map((r,i)=>'<div class="row">'+(i===2?'<button type="button" class="wide" data-k="shift" aria-pressed="'+kshift+'">⇧</button>':'')+r.map(k=>{const s=kshift&&KSH[k]?KSH[k]:k;return '<button type="button" data-k="'+s+'">'+s+'</button>'}).join('')+(i===2?'<button type="button" class="wide" data-k="back" aria-label="'+(ko?'지우기':'Effacer')+'">⌫</button>':'')+'</div>').join('')
+   +'<div class="row"><button type="button" class="wide" data-k="clear">'+(ko?'모두 지우기':'Vider')+'</button><button type="button" class="sp" data-k="space">'+(ko?'띄어쓰기':'Espace')+'</button><button type="button" class="wide" data-k="close">'+(ko?'닫기':'Fermer')+'</button></div>';}
+function kset(v){const q=$('q');q.value=v;st.q=v;st.n=120;renderList();}
+$('kbd').addEventListener('mousedown',e=>e.preventDefault());
+$('kbd').addEventListener('click',e=>{const b=e.target.closest('button[data-k]');if(!b)return;const k=b.dataset.k,q=$('q');
+  if(q.value!==kbase+hcompose(kseq)){kbase=q.value;kseq=[];}
+  if(k==='shift'){kshift=!kshift;drawKbd();return}
+  if(k==='close'){toggleKbd(false);return}
+  if(k==='clear'){kbase='';kseq=[];kset('');return}
+  if(k==='space'){kbase=kbase+hcompose(kseq)+' ';kseq=[];kset(kbase);return}
+  if(k==='back'){if(kseq.length)kseq.pop();else kbase=kbase.slice(0,-1);kset(kbase+hcompose(kseq));return}
+  kseq.push(k);if(kshift){kshift=false;drawKbd()}kset(kbase+hcompose(kseq));});
+function toggleKbd(on){$('kbd').hidden=!on;$('kbbtn').setAttribute('aria-pressed',on);if(on){kbase=$('q').value;kseq=[];drawKbd()}}
+$('kbbtn').addEventListener('click',()=>toggleKbd($('kbd').hidden));
 $('acc').innerHTML='<span>'+'Accents</span>'+['é','è','ê','à','â','ç','î','ï','ô','û','ù','œ'].map(c=>'<button type="button" data-a="'+c+'">'+c+'</button>').join('');
 $('acc').addEventListener('click',e=>{const b=e.target.closest('button[data-a]');if(!b)return;const q=$('q'),s=q.selectionStart??q.value.length,en=q.selectionEnd??s;q.value=q.value.slice(0,s)+b.dataset.a+q.value.slice(en);q.focus();q.setSelectionRange(s+1,s+1);st.q=q.value;st.n=120;renderList()});
 $('cho').innerHTML=['ㄱ','ㄴ','ㄷ','ㄹ','ㅁ','ㅂ','ㅅ','ㅇ','ㅈ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'].map(c=>'<button type="button" aria-pressed="false" data-c="'+c+'">'+c+'</button>').join('');
