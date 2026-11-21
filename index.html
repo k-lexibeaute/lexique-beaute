@@ -290,7 +290,7 @@ function filtered(){
 }
 function renderList(){
   const r=filtered(); $('count').textContent=t('count')(r.length);
-  $('list').innerHTML=r.length?r.slice(0,st.n).map(e=>'<li'+(e.k==='s'?' class="sub"':'')+'><button type="button" data-id="'+e.id+'"'+(st.cur===e.id?' aria-current="true"':'')+'><span class="kw">'+esc(e.w)+'</span><span class="fw">'+fes(e.fr)+'</span></button></li>').join(''):'<li style="padding:14px 12px;color:var(--muted)">'+t('none')+'</li>';
+  $('list').innerHTML=r.length?r.slice(0,st.n).map(e=>'<li'+(e.k==='s'?' class="sub"':'')+'><button type="button" data-id="'+e.id+'"'+(st.cur===e.id?' aria-current="true"':'')+'><span class="kw">'+esc(e.w)+'</span><span class="fw">'+fes(e.fr)+'</span></button></li>').join(''):'<li style="padding:14px 12px;color:var(--muted)">'+t('none')+((st.cat||st.form||st.cho)?' <button type="button" id="resetf" style="margin-top:8px;border:1px solid var(--line);border-radius:999px;background:var(--lime);color:#151515;padding:4px 12px;cursor:pointer">'+(L==='ko'?'필터 모두 지우기':'Retirer les filtres')+'</button>':'')+'</li>';
   $('more').hidden=r.length<=st.n; $('more').textContent=t('more')+' ('+(r.length-st.n)+')';
   return r;
 }
@@ -406,6 +406,7 @@ $('acc').innerHTML='<span>'+'Accents</span>'+['é','è','ê','à','â','ç','î'
 $('acc').addEventListener('click',e=>{const b=e.target.closest('button[data-a]');if(!b)return;const q=$('q'),s=q.selectionStart??q.value.length,en=q.selectionEnd??s;q.value=q.value.slice(0,s)+b.dataset.a+q.value.slice(en);q.focus();q.setSelectionRange(s+1,s+1);st.q=q.value;st.n=120;renderList()});
 $('cho').innerHTML=['ㄱ','ㄴ','ㄷ','ㄹ','ㅁ','ㅂ','ㅅ','ㅇ','ㅈ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'].map(c=>'<button type="button" aria-pressed="false" data-c="'+c+'">'+c+'</button>').join('');
 $('q').addEventListener('input',e=>{st.q=e.target.value;st.n=120;renderList()});
+$('list').addEventListener('click',e=>{if(!e.target.closest('#resetf'))return;st.cat=st.form=st.cho='';$('fcat').value='';$('fform').value='';document.querySelectorAll('#cho button').forEach(x=>x.setAttribute('aria-pressed','false'));st.n=120;renderList();});
 $('fcat').addEventListener('change',e=>{st.cat=e.target.value;st.n=120;renderList()});
 $('fform').addEventListener('change',e=>{st.form=e.target.value;st.n=120;renderList()});
 $('cho').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;st.cho=st.cho===b.dataset.c?'':b.dataset.c;st.n=120;
